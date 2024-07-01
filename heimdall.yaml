@@ -1,0 +1,28 @@
+version: "3.8"
+services:
+  heimdall:
+    image: lscr.io/linuxserver/heimdall:latest
+    container_name: heimdall
+    networks:
+      docker-intern:
+        ipv4_address: 172.18.0.12
+    environment:
+      - TZ=Europe/Zurich
+    volumes:
+      - 'heimdall:/config'
+    ports:
+      - 8083:80
+      - 44383:443
+    restart: unless-stopped
+
+volumes:
+  heimdall:
+    external: true
+networks:
+  docker-intern:
+    external: true
+    name: docker-intern
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
+          gateway: 172.18.0.1
