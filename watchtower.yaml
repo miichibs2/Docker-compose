@@ -1,0 +1,22 @@
+version: "3"
+services:
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+    environment:
+      - TZ=Europe/Zurich
+    networks:
+      default:
+        ipv4_address: 172.18.0.4
+
+networks:
+  default:
+    external: true
+    name: docker-intern
+    ipam:
+      config:
+        - subnet: 172.18.0.1/16
+          gateway: 172.18.0.1
