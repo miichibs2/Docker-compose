@@ -1,0 +1,59 @@
+version: '3.3'
+services:
+  appsec-npm:
+    container_name: npm-attachment
+    image: 'ghcr.io/openappsec/nginx-proxy-manager-attachment:latest'
+    ipc: host
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Zurich
+    networks:
+      docker-intern:
+        ipv4_address: 172.18.0.3
+    ports:
+      - '80:80'
+      - '443:443'
+      - '81:81'
+    volumes:
+      - npm-appsecdata:/data
+      - npm-appsecletsencrypt:/etc/letsencrypt
+      - npm-appsecappsec-logs:/ext/appsec-logs
+      - npm-appsecappsec-localconfig:/ext/appsec
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+
+  appsec-agent:
+    container_name: appsec-agent
+    image: 'ghcr.io/openappsec/agent:latest'
+    network_mode: service:appsec-npm
+    ipc: host
+    restart: unless-stopped
+    environment:
+      - user_email=${user_email}
+      - nginxproxymanager=true
+      - autoPolicyLoad=true
+      - TZ=Europe/Zurich
+    volumes:
+      - npm-appsecappsec-config:/etc/cp/conf
+      - npm-appsecappsec-data:/etc/cp/data
+      - npm-appsecappsec-logs:/var/log/nano_agent
+      - npm-appsecappsec-localconfig:/ext/appsec
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    command: /cp-nano-agent --standalone
+
+volumes:
+  npm-appsecdata:
+  npm-appsecletsencrypt:
+  npm-appsecappsec-logs:
+  npm-appsecappsec-localconfig:
+  npm-appsecappsec-config:
+  npm-appsecappsec-data:
+networks:
+  docker-intern:
+    external: true
+    name: docker-intern
+    ipam:
+      config:
+        - subnet: 172.18.0.1/16
+          gateway: 172.18.0.1
