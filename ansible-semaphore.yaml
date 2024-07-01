@@ -1,0 +1,57 @@
+version: '3.8'
+services:
+  semaphore-mysql:
+    restart: unless-stopped
+    image: mysql:8.0
+    hostname: semaphore-mysql
+    container_name: semaphore-db
+    volumes:
+      - semaphore-mysql:/var/lib/mysql
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PW}
+    networks:
+      docker-intern:
+        ipv4_address: 172.18.0.28
+  
+  semaphore:
+    restart: unless-stopped
+    ports:
+      - 3000:3000
+    image: semaphoreui/semaphore:latest
+    container_name: semaphore-ui
+    volumes:
+      - ~/.ssh:/root/.ssh
+    environment:
+      SEMAPHORE_DB_USER: ${DB_USER}
+      SEMAPHORE_DB_PASS: ${DB_PW}
+      SEMAPHORE_DB_HOST: semaphore-mysql
+      SEMAPHORE_DB_PORT: 3306
+      SEMAPHORE_DB_DIALECT: mysql
+      SEMAPHORE_DB: ${DB_NAME}
+      SEMAPHORE_PLAYBOOK_PATH: /tmp/semaphore/
+      SEMAPHORE_ADMIN_PASSWORD: ${SEMAPHORE_ADMIN}
+      SEMAPHORE_ADMIN_NAME: ${ADM_USER}
+      SEMAPHORE_ADMIN_EMAIL: ${ADM_MAIL}
+      SEMAPHORE_ADMIN: ${ADM_USER}
+      SEMAPHORE_ACCESS_KEY_ENCRYPTION: ${SEMAPHORE_ACCESS_KEY}
+      SEMAPHORE_LDAP_ACTIVATED: 'no'
+    depends_on:
+      - semaphore-mysql
+    networks:
+      docker-intern:
+        ipv4_address: 172.18.0.27
+
+volumes:
+  semaphore-mysql:
+
+networks:
+  docker-intern:
+    external: true
+    name: docker-intern
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
+          gateway: 172.18.0.1
