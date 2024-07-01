@@ -1,0 +1,63 @@
+version: "3.8"
+services:
+  unifi-db:
+    image: docker.io/mongo:4.2
+    container_name: unifi-db
+    environment:
+      - TZ=Europe/Zurich
+    volumes:
+      - unifi_db:/data/db
+      - /data/compose/49/static_files/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    restart: unless-stopped
+    networks:
+      docker-intern:
+        ipv4_address: 172.18.0.22
+
+  unifi-network-application:
+    image: lscr.io/linuxserver/unifi-network-application:latest
+    container_name: unifi-ui
+    depends_on:
+      - unifi-db
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Zurich
+      - MONGO_USER=${DB_USER}
+      - MONGO_PASS=${DB_PW}
+      - MONGO_HOST=unifi-db
+      - MONGO_PORT=27017
+      - MONGO_DBNAME=${DB_NAME}
+      - MEM_LIMIT=1024
+      - MEM_STARTUP=1024
+    volumes:
+      - unifi_na:/config
+    ports:
+      - 8443:8443
+      - 3478:3478/udp
+      - 10001:10001/udp
+      - 8080:8080
+      - 1900:1900/udp
+      - 8843:8843
+      - 8880:8880
+      - 6789:6789
+      - 5514:5514/udp
+    restart: unless-stopped
+    networks:
+      docker-intern:
+        ipv4_address: 172.18.0.21
+volumes:
+  unifi_na:
+  unifi_db:
+
+networks:
+  docker-intern:
+    external: true
+    name: docker-intern
+    ipam:
+      config:
+        - subnet: 172.18.0.1/16
+          gateway: 172.18.0.1
+#UniFi Consoles - root / ubnt or root / ui
+#UniFi Gateways - root / ubnt or root / ui
+#UniFi Devices  - ubnt / ubnt or ui / ui
+#set-inform http://IP:8080/inform
