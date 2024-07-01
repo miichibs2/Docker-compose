@@ -1,0 +1,17 @@
+version: "3"
+services:
+  upsnap:
+    container_name: wol-upsnap
+    image: ghcr.io/seriousm4x/upsnap:4
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - wol-upsnap:/app/pb_data
+    environment:
+      - TZ=Europe/Zurich
+    dns:
+      - 192.168.10.11
+      - 192.168.10.2
+      - 192.168.10.1
+volumes:
+  wol-upsnap:
