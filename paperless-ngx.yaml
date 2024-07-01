@@ -1,0 +1,81 @@
+version: "3.4"
+services:
+  broker:
+    image: docker.io/library/redis:7
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+    networks:
+      docker-intern:
+        ipv4_address: 172.18.0.24
+    environment:
+      TZ: Europe/Zurich
+
+  db:
+    image: docker.io/library/postgres:15
+    restart: unless-stopped
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      docker-intern:
+        ipv4_address: 172.18.0.23
+    environment:
+      POSTGRES_DB: ${paperless_DB_NAME}
+      POSTGRES_USER: ${paperless_DB_USER}
+      POSTGRES_PASSWORD: ${paperless_DB_PW}
+      TZ: Europe/Zurich
+
+  webserver:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    restart: unless-stopped
+    depends_on:
+      - db
+      - broker
+    ports:
+      - "8010:8000"
+    networks:
+      docker-intern:
+        ipv4_address: 172.18.0.37
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "-S", "--max-time", "2", "http://localhost:8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - data:/usr/src/paperless/data
+      - media:/usr/src/paperless/media
+      - export:/usr/src/paperless/export
+      - consume:/usr/src/paperless/consume
+      - /mnt/stnas1/Sthome_Scans/original:/usr/src/paperless/media/Sthome_Scans/original
+      - /mnt/stnas1/Sthome_Scans/trash:/usr/src/paperless/media/Sthome_Scans/trash
+      - /mnt/stnas1/Sthome_Scans/ocr:/usr/src/paperless/media/Sthome_Scans/ocr
+
+    environment:
+      PAPERLESS_CSRF_TRUSTED_ORIGINS: ${paperless_FULL_DOMAIN}
+      PAPERLESS_ALLOWED_HOSTS: ${paperless_DOMAIN}
+      PAPERLESS_REDIS: redis://broker:6379
+      PAPERLESS_DBHOST: db
+      TZ: Europe/Zurich
+      USERMAP_UID: 1000
+      USERMAP_GID: 100
+      PAPERLESS_TIME_ZONE: Europe/Zurich
+      PAPERLESS_OCR_LANGUAGE: deu
+      PAPERLESS_CONSUMPTION_DIR: /usr/src/paperless/media/Sthome_Scans/original
+      PAPERLESS_TRASH_DIR: /usr/src/paperless/media/Sthome_Scans/trash
+      PAPERLESS_CONSUME_INTERVAL: 60
+
+networks:
+  docker-intern:
+    external: true
+    name: docker-intern
+    ipam:
+      config:
+        - subnet: 172.18.0.1/16
+          gateway: 172.18.0.1
+volumes:
+  data:
+  media:
+  pgdata:
+  redisdata:
+  export:
+  consume:
