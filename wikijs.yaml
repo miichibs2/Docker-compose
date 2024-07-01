@@ -1,0 +1,49 @@
+version: "3"
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: wikijs-db
+    environment:
+      TZ: Europe/Zurich
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_PASSWORD: ${DB_PW}
+      POSTGRES_USER: ${DB_USER}
+    logging:
+      driver: "none"
+    restart: unless-stopped
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      docker-intern:
+        ipv4_address: 172.18.0.15
+
+  wiki:
+    image: requarks/wiki:2.5
+    container_name: wikijs-ui
+    depends_on:
+      - db
+    environment:
+      TZ: Europe/Zurich
+      DB_HOST: db
+      DB_TYPE: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PW}
+      DB_NAME: ${DB_NAME}
+    restart: unless-stopped
+    networks:
+      docker-intern:
+        ipv4_address: 172.18.0.14
+    ports:
+      - "8087:3000"
+
+volumes:
+  db-data:
+networks:
+  docker-intern:
+    external: true
+    name: docker-intern
+    ipam:
+      config:
+        - subnet: 172.18.0.1/16
+          gateway: 172.18.0.1
