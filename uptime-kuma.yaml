@@ -1,0 +1,29 @@
+version: '3.3'
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma
+    container_name: uptime-kuma
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - uptime-kuma:/data
+    environment:
+      - TZ=Europe/Zurich
+    ports:
+      - "3001:3001"
+    networks:
+      docker-intern:
+        ipv4_address: 172.18.0.10
+
+volumes:
+  uptime-kuma:
+    external: true
+
+networks:
+  docker-intern:
+    external: true
+    name: docker-intern
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
+          gateway: 172.18.0.1
