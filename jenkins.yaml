@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  jenkins-docker:
+    image: jenkins/jenkins:lts
+    container_name: jenkins-docker
+    privileged: true
+    networks:
+      docker-intern:
+        ipv4_address: 172.18.0.35
+    environment:
+      DOCKER_TLS_CERTDIR: /certs
+    volumes:
+      - jenkins-docker-certs:/certs/client
+      - jenkins-data:/var/jenkins_home
+    user: root
+    ports:
+      - 32771:8080
+      - 32770:50000
+    restart: unless-stopped
+
+volumes:
+  jenkins-docker-certs:
+  jenkins-data:
+networks:
+  docker-intern:
+    external: true
+    name: docker-intern
+    ipam:
+      config:
+        - subnet: 172.18.0.1/16
+          gateway: 172.18.0.1
