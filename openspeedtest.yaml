@@ -1,0 +1,23 @@
+version: '3.9'
+services:
+  openspeedtest:
+    image: openspeedtest/latest
+    ports:
+      - '8084:3001'
+      - '44384:3000'
+    container_name: openspeedtest
+    environment:
+      - TZ=Europe/Zurich
+    restart: unless-stopped
+    networks:
+      docker-intern:
+        ipv4_address: 172.18.0.13
+
+networks:
+  docker-intern:
+    external: true
+    name: docker-intern
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
+          gateway: 172.18.0.1
