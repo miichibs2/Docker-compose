@@ -1,0 +1,48 @@
+services:
+  photoprism:
+    container_name: photoprism-app
+    image: photoprism/photoprism:latest
+    restart: unless-stopped
+    networks:
+      docker-intern:
+        ipv4_address: 172.18.0.29
+    stop_grace_period: 10s
+    depends_on:
+      - mariadb
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+    ports:
+      - "2342:2342"
+    env_file:
+      - stack.env
+    working_dir: "/photoprism"
+    volumes:
+      - "/mnt/stnas1/photoprism/originals:/photoprism/originals"
+      - "/mnt/stnas1/photoprism/storage:/photoprism/storage"    
+      - "/mnt/stnas1/photoprism/import:/photoprism/import"
+
+  mariadb:
+    image: mariadb:11
+    restart: unless-stopped
+    networks:
+      docker-intern:
+        ipv4_address: 172.18.0.30
+    stop_grace_period: 5s
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+    command: --innodb-buffer-pool-size=512M --transaction-isolation=READ-COMMITTED --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max-connections=512 --innodb-rollback-on-timeout=OFF --innodb-lock-wait-timeout=120
+    volumes:
+      - "/mnt/stnas1/photoprism/mariadb:/var/lib/mysql"
+    env_file:
+      - stack.env
+
+networks:
+  docker-intern:
+    external: true
+    name: docker-intern
+    ipam:
+      config:
+        - subnet: 172.18.0.1/16
+          gateway: 172.18.0.1
