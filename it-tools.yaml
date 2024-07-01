@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+  it-tools:
+    image: corentinth/it-tools:latest
+    container_name: it-tools
+    volumes:
+      - 'it-tools:/data'
+    environment:
+      - TZ=Europe/Zurich
+    restart: unless-stopped
+    networks:
+      docker-intern:
+        ipv4_address: 172.18.0.11
+    ports:
+      - "8082:80"
+
+volumes:
+  it-tools:
+networks:
+  docker-intern:
+    external: true
+    name: docker-intern
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
+          gateway: 172.18.0.1
