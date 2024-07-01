@@ -1,0 +1,32 @@
+services:
+  netbootxyz:
+    image: ghcr.io/netbootxyz/netbootxyz:latest
+    container_name: netbootxyz
+    networks:
+      docker-intern:
+        ipv4_address: 172.18.0.33
+    environment:
+      - PUID=1000
+      - PGID=1000
+      # - MENU_VERSION=1.9.9 #optional
+      # - PORT_RANGE=30000:30010 #optional
+      # - SUBFOLDER=/ #optional
+      - WEB_APP_PORT=3000
+      - NGINX_PORT=80
+    volumes:
+      - /mnt/stnas1/netbootxyz/config:/config
+      - /mnt/stnas1/netbootxyz/assets:/assets #optional
+    ports:
+      - 3002:3000
+      - 69:69/udp
+      - 8085:80 #optional
+    restart: unless-stopped
+
+networks:
+  docker-intern:
+    external: true
+    name: docker-intern
+    ipam:
+      config:
+        - subnet: 172.18.0.1/16
+          gateway: 172.18.0.1
