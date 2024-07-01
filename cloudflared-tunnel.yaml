@@ -1,0 +1,27 @@
+version: '3.9'
+services:
+  cloudflared:
+    container_name: cloudflared
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CF_Token}
+    volumes:
+      - cloudflared:/etc/cloudflared
+    environment:
+      - TZ=Europe/Zurich
+    restart: unless-stopped
+    networks:
+      docker-intern:
+        ipv4_address: 172.18.0.19        
+
+volumes:
+  cloudflared:
+    name: cloudflared
+
+networks:
+  docker-intern:
+    external: true
+    name: docker-intern
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
+          gateway: 172.18.0.1
