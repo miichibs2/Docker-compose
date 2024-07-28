@@ -1,0 +1,28 @@
+version: "3"
+
+services:
+  gotify:
+    container_name: gotify-server
+    image: gotify/server
+    ports:
+      - 8086:80
+    environment:
+      - GOTIFY_REGISTRATION=false
+      - GOTIFY_DEFAULTUSER_NAME=${gousr_USER}
+      - GOTIFY_DEFAULTUSER_PASS=${gousr_PW}
+    volumes:
+      - gotify_data:/app/data
+    networks:
+      docker-intern:
+        ipv4_address: 172.18.0.42
+
+volumes:
+  gotify_data:
+networks:
+  docker-intern:
+    external: true
+    name: docker-intern
+    ipam:
+      config:
+        - subnet: 172.18.0.1/16
+          gateway: 172.18.0.1
