@@ -7,9 +7,6 @@ services:
     restart: unless-stopped
     environment:
       - TZ=Europe/Zurich
-    networks:
-      docker-intern:
-        ipv4_address: 172.18.0.3
     ports:
       - '80:80'
       - '443:443'
@@ -49,11 +46,4 @@ volumes:
   npm-appsecappsec-localconfig:
   npm-appsecappsec-config:
   npm-appsecappsec-data:
-networks:
-  docker-intern:
-    external: true
-    name: docker-intern
-    ipam:
-      config:
-        - subnet: 172.18.0.1/16
-          gateway: 172.18.0.1
+
