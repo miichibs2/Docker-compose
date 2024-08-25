@@ -25,7 +25,6 @@ services:
     ipc: host
     restart: unless-stopped
     environment:
-      - user_email=${user_email}
       - nginxproxymanager=true
       - autoPolicyLoad=true
       - TZ=Europe/Zurich
