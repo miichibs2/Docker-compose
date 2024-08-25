@@ -16,7 +16,6 @@ services:
       - npm-appsecletsencrypt:/etc/letsencrypt
       - npm-appsecappsec-logs:/ext/appsec-logs
       - npm-appsecappsec-localconfig:/ext/appsec
-      - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
 
   appsec-agent:
@@ -35,7 +34,6 @@ services:
       - npm-appsecappsec-data:/etc/cp/data
       - npm-appsecappsec-logs:/var/log/nano_agent
       - npm-appsecappsec-localconfig:/ext/appsec
-      - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     command: /cp-nano-agent --standalone
 
