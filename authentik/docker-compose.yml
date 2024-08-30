@@ -20,7 +20,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_DB: ${POSTGRES_DB}
     env_file:
-      .env
+      stack.env
   redis:
     image: docker.io/library/redis:alpine
     command: --save 60 1 --loglevel warning
@@ -51,7 +51,7 @@ services:
       AUTHENTIK_POSTGRESQL__NAME: ${POSTGRES_DB}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${POSTGRES_PASSWORD}
     env_file:
-      - .env
+      - stack.env
     container_name: authentik-server
     ports:
       - 9000:9000
@@ -92,7 +92,7 @@ services:
       AUTHENTIK_POSTGRESQL__NAME: ${POSTGRES_DB}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${POSTGRES_PASSWORD}
     env_file:
-      -  .env
+      -  stack.env
     container_name: authentik-worker
     networks:
       - traefik_default
