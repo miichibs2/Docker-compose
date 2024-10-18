@@ -1,0 +1,108 @@
+services:
+  postgresql:
+    image: docker.io/library/postgres:16-alpine
+    restart: unless-stopped
+    container_name: authentik-postgresql
+    networks:
+      traefik_default:
+        ipv4_address: 172.24.255.254
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    volumes:
+      - ${HOME_DIR}/postgresql:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: ${AUTHENTIK_POSTGRESQL__PASSWORD}
+      POSTGRES_USER: ${AUTHENTIK_POSTGRESQL__USER}
+      POSTGRES_DB: ${AUTHENTIK_POSTGRESQL__NAME}
+    env_file:
+      - stack.env
+
+  redis:
+    image: docker.io/library/redis:alpine
+    command: --save 60 1 --loglevel warning
+    restart: unless-stopped
+    container_name: authentik-redis
+    networks:
+      traefik_default:
+        ipv4_address: 172.24.255.253
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 3s
+    volumes:
+      - ${HOME_DIR}/redis:/data
+    env_file:
+      - stack.env
+  server:
+    image: ghcr.io/goauthentik/server:${AUTHENTIK_TAG}
+    restart: unless-stopped
+    command: server
+    ulimits:
+      nofile:
+        soft: 10240
+        hard: 10240
+
+    container_name: authentik-server
+#    ports:
+#      - 9000:9000
+#      - 9445:9443
+    networks:
+      traefik_default:
+        ipv4_address: 172.24.255.252
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${SERVICE_NAME}.entrypoints=web"
+      - "traefik.http.routers.${SERVICE_NAME}.rule=Host(`${SERVICE_NAME}.${DOMAIN}`)"
+      - "traefik.http.middlewares.${SERVICE_NAME}-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.${SERVICE_NAME}.middlewares=${SERVICE_NAME}-https-redirect"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.entrypoints=websecure"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.rule=Host(`${SERVICE_NAME}.${DOMAIN}`)"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.tls=true"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.service=${SERVICE_NAME}"
+      - "traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_PORT}"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.tls.certresolver=production"
+      - "traefik.docker.network=traefik_default"
+    volumes:
+      - ${HOME_DIR}/media:/media
+      - ${HOME_DIR}/custom-templates:/templates
+    env_file:
+      - stack.env
+    depends_on:
+      - postgresql
+      - redis
+  worker:
+    image: ghcr.io/goauthentik/server:${AUTHENTIK_TAG}
+    restart: unless-stopped
+    command: worker
+    ulimits:
+      nofile:
+        soft: 10240
+        hard: 10240
+    container_name: authentik-worker
+    networks:
+      traefik_default:
+        ipv4_address: 172.24.255.251
+    user: root
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${HOME_DIR}/media:/media
+      - ${HOME_DIR}/certs:/certs
+      - ${HOME_DIR}/custom-templates:/templates
+    env_file:
+      - stack.env
+    depends_on:
+      - postgresql
+      - redis
+networks:
+  traefik_default:
+    external: true
+    ipam:
+      config:
+        - subnet: 172.24.0.10/16
+          gateway: 172.24.0.1
