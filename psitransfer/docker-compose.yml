@@ -1,0 +1,28 @@
+services:
+  psitransfer:
+    container_name: psitransfer
+    networks:
+      - traefik_default
+    environment:
+      - PSITRANSFER_ADMIN_PASS=${ADMIN_PASS}
+    volumes:
+      - ${home_dir}/storage:/data
+    image: 'psitrax/psitransfer:latest'
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${SERVICE_NAME}.entrypoints=web"
+      - "traefik.http.routers.${SERVICE_NAME}.rule=Host(`${SERVICE_NAME}.${DOMAIN}`)"
+      - "traefik.http.middlewares.${SERVICE_NAME}-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.${SERVICE_NAME}.middlewares=${SERVICE_NAME}-https-redirect"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.entrypoints=websecure"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.rule=Host(`${SERVICE_NAME}.${DOMAIN}`)"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.tls=true"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.service=${SERVICE_NAME}"
+      - "traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_PORT}"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.tls.certresolver=production"
+      - "traefik.docker.network=traefik_default"
+  # Middleware
+      - "traefik.http.routers.${SERVICE_NAME}-secure.middlewares=authentik@file"
+networks:
+  traefik_default:
+    external: true

@@ -1,0 +1,40 @@
+services:
+  traefik:
+    image: docker.io/library/traefik:latest
+    container_name: traefik
+    ports:
+      - 80:80
+      - 443:443
+#      - 8080:8080
+    networks:
+      traefik_default:
+    volumes:
+      - /run/docker.sock:/run/docker.sock:ro
+      - ${HOME_DIR}/traefik.yaml:/traefik.yaml
+      - ${HOME_DIR}/conf/:/etc/traefik/conf/
+      - ${HOME_DIR}/certs/:/etc/traefik/certs/
+    environment:
+      - TZ=Europe/Zurich
+      - CF_API_EMAIL=${CF_API_EMAIL}
+      - CF_API_KEY=${CF_API_KEY}
+      #- CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
+    restart: unless-stopped
+    labels:
+      - "${SERVICE_NAME}.enable=true"
+      - "${SERVICE_NAME}.http.routers.${SERVICE_NAME}.entrypoints=web"
+      - "${SERVICE_NAME}.http.routers.${SERVICE_NAME}.rule=Host(`${SERVICE_NAME}.${DOMAIN}`)"
+      - "${SERVICE_NAME}.http.middlewares.${SERVICE_NAME}-https-redirect.redirectscheme.scheme=https"
+      - "${SERVICE_NAME}.http.routers.${SERVICE_NAME}.middlewares=${SERVICE_NAME}-https-redirect"
+      - "${SERVICE_NAME}.http.routers.${SERVICE_NAME}-secure.entrypoints=websecure"
+      - "${SERVICE_NAME}.http.routers.${SERVICE_NAME}-secure.rule=Host(`${SERVICE_NAME}.${DOMAIN}`)"
+      - "${SERVICE_NAME}.http.routers.${SERVICE_NAME}-secure.tls=true"
+      - "${SERVICE_NAME}.http.routers.${SERVICE_NAME}-secure.service=${SERVICE_NAME}"
+      - "${SERVICE_NAME}.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_PORT}"
+      - "${SERVICE_NAME}.http.routers.${SERVICE_NAME}-secure.tls.certresolver=production"
+      - "${SERVICE_NAME}.docker.network=${SERVICE_NAME}_default"
+  # Middleware
+      - "${SERVICE_NAME}.http.routers.${SERVICE_NAME}-secure.middlewares=authentik@file"
+
+networks:
+  traefik_default:
+    external: true

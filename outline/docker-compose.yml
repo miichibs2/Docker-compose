@@ -1,0 +1,56 @@
+services:
+  outline:
+    image: docker.getoutline.com/outlinewiki/outline:latest
+    container_name: outline-server
+    networks:
+      - traefik_default
+    env_file: stack.env
+    volumes:
+      - ${home_dir}/storage:/var/lib/outline/data
+    depends_on:
+      - outline-redis
+      - outline-postgres
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${SERVICE_NAME}.entrypoints=web"
+      - "traefik.http.routers.${SERVICE_NAME}.rule=Host(`${SERVICE_NAME}.${DOMAIN}`)"
+      - "traefik.http.middlewares.${SERVICE_NAME}-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.${SERVICE_NAME}.middlewares=${SERVICE_NAME}-https-redirect"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.entrypoints=websecure"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.rule=Host(`${SERVICE_NAME}.${DOMAIN}`)"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.tls=true"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.service=${SERVICE_NAME}"
+      - "traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_PORT}"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.tls.certresolver=production"
+      - "traefik.docker.network=traefik_default"
+  outline-redis:
+    image: redis
+    container_name: outline-redis
+    networks:
+      - traefik_default
+    env_file: stack.env
+    volumes:
+      - ${home_dir}/redis/redis.conf:/redis.conf
+    command: ["redis-server", "/redis.conf"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 30s
+      retries: 3
+  outline-postgres:
+    image: postgres
+    container_name: outline-postgres
+    networks:
+      - traefik_default
+    env_file: stack.env
+    volumes:
+      - ${home_dir}/data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "outline", "-U", "user"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+networks:
+  traefik_default:
+    external: true

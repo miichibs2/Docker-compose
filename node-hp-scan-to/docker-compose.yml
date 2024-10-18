@@ -1,0 +1,20 @@
+services:
+  node-hp-scan-to:
+    image: manuc66/node-hp-scan-to:latest
+    container_name: node-hp-scan-to-paperless-ngx
+    hostname: Scanner
+    volumes:
+      - ${home_dir_paperless}/consume:/scan
+    environment:
+      - DIR=/scan
+      - IP={PRINTER_IP}
+      - RESOLUTION=300
+      - CMDLINE=-D adf-autoscan
+      - LABEL=Scanner
+      - PATTERN="scan"_dd.mm.yyyy_hh:MM:ss
+      - TZ=Europe/Zurich
+      - PAPERLESS_POST_DOCUMENT_URL=${PAPERLESS_POST_DOCUMENT_URL}
+      - PAPERLESS_TOKEN=${PAPERLESS_TOKEN}
+      - USERMAP_UID=911
+      - USERMAP_GID=911
+    restart: always

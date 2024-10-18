@@ -1,0 +1,11 @@
+version: '3.9'
+services:
+  openspeedtest:
+    image: openspeedtest/latest
+    container_name: openspeedtest
+    environment:
+      - TZ=Europe/Zurich
+    restart: unless-stopped
+    ports:
+      - '3001:3001'
+      - '3000:3000'

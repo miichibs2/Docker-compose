@@ -1,0 +1,144 @@
+version: "3.4"
+services:
+  PAPERLESS_broker:
+    image: docker.io/library/redis:7
+    container_name: PAPERLESS_broker
+    networks:
+      - traefik_default
+    restart: unless-stopped
+    volumes:
+      - ${home_dir}/redisdata:/data
+    environment:
+      TZ: Europe/Zurich
+      USERMAP_UID: 911
+      USERMAP_GID: 911
+  PAPERLESS_db:
+    image: docker.io/library/postgres:15
+    container_name: PAPERLESS_db
+    networks:
+      - traefik_default
+    restart: unless-stopped
+    volumes:
+      - ${home_dir}/pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${paperless_DB_NAME}
+      POSTGRES_USER: ${paperless_DB_USER}
+      POSTGRES_PASSWORD: ${paperless_DB_PW}
+      TZ: Europe/Zurich
+      USERMAP_UID: 911
+      USERMAP_GID: 911
+  PAPERLESS_webserver:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: PAPERLESS_webserver
+    networks:
+      - traefik_default
+    restart: unless-stopped
+    depends_on:
+      - PAPERLESS_db
+      - PAPERLESS_broker
+      - PAPERLESS_gotenberg
+      - PAPERLESS_tika
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "-S", "--max-time", "2", "http://localhost:8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - ${home_dir}/data:/usr/src/paperless/data
+      - ${home_dir}/media:/usr/src/paperless/media
+      - ${home_dir}/export:/usr/src/paperless/export
+      - ${home_dir}/consume:/usr/src/paperless/consume
+      - ${home_dir}/trash:/usr/src/paperless/trash
+    environment:
+      PAPERLESS_CSRF_TRUSTED_ORIGINS: 'https://${SERVICE_NAME}.${DOMAIN}'
+      PAPERLESS_ALLOWED_HOSTS: '${SERVICE_NAME}.${DOMAIN}'
+      PAPERLESS_REDIS: redis://PAPERLESS_broker:6379
+      PAPERLESS_DBHOST: PAPERLESS_db
+      TZ: Europe/Zurich
+      USERMAP_UID: 911
+      USERMAP_GID: 911
+      PAPERLESS_TIME_ZONE: Europe/Zurich
+      PAPERLESS_OCR_LANGUAGE: deu
+      PAPERLESS_OCR_LANGUAGES: deu eng
+      PAPERLESS_CONSUMPTION_DIR: /usr/src/paperless/consume
+      PAPERLESS_TRASH_DIR: /usr/src/paperless/trash
+      PAPERLESS_CONSUME_INTERVAL: 60
+      PAPERLESS_TIKA_ENABLED: 1
+      PAPERLESS_TIKA_GOTENBERG_ENDPOINT: http://PAPERLESS_gotenberg:3000
+      PAPERLESS_TIKA_ENDPOINT: http://PAPERLESS_tika:9998
+      PAPERLESS_DBUSER: ${paperless_DB_USER}
+      PAPERLESS_DBPASS: ${paperless_DB_PW}
+      PAPERLESS_DBNAME: ${paperless_DB_NAME}
+      PAPERLESS_SECRET_KEY: ${paperless_secret_key}
+      PAPERLESS_DBSSLMODE: prefer
+      PAPERLESS_APPS: allauth.socialaccount.providers.openid_connect
+      PAPERLESS_REDIRECT_LOGIN_TO_SSO: True
+      PAPERLESS_DISABLE_REGULAR_LOGIN: false
+
+      PAPERLESS_SOCIALACCOUNT_PROVIDERS: >
+          {
+            "openid_connect": {
+              "APPS": [
+                {
+                  "provider_id": "authentik",
+                  "name": "Authentik",
+                  "client_id": "${OIDC_CLIENT_ID}",
+                  "secret": "${OIDC_SECRET}",
+                  "settings": {
+                    "server_url": "${OIDC_URL}"
+                  }
+                }
+              ],
+              "OAUTH_PKCE_ENABLED": "True"
+            }
+          }
+
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${SERVICE_NAME}.entrypoints=web"
+      - "traefik.http.routers.${SERVICE_NAME}.rule=Host(`${SERVICE_NAME}.${DOMAIN}`)"
+      - "traefik.http.middlewares.${SERVICE_NAME}-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.${SERVICE_NAME}.middlewares=${SERVICE_NAME}-https-redirect"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.entrypoints=websecure"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.rule=Host(`${SERVICE_NAME}.${DOMAIN}`)"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.tls=true"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.service=${SERVICE_NAME}"
+      - "traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_PORT}"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.tls.certresolver=production"
+      - "traefik.docker.network=traefik_default"
+      # Middleware for protecting the /admin path with authentik
+      - "traefik.http.routers.${SERVICE_NAME}-admin.rule=Host(`${SERVICE_NAME}.${DOMAIN}`) && PathPrefix(`/admin`)"
+      - "traefik.http.routers.${SERVICE_NAME}-admin.entrypoints=websecure"
+      - "traefik.http.routers.${SERVICE_NAME}-admin.service=${SERVICE_NAME}"
+      - "traefik.http.routers.${SERVICE_NAME}-admin.tls=true"
+      - "traefik.http.routers.${SERVICE_NAME}-admin.middlewares=authentik@file"
+
+
+  PAPERLESS_gotenberg:
+    image: docker.io/gotenberg/gotenberg:7.10
+    restart: unless-stopped
+    container_name: PAPERLESS_gotenberg
+    networks:
+      - traefik_default
+    command:
+      - "gotenberg"
+      - "--chromium-disable-javascript=true"
+      - "--chromium-allow-list=file:///tmp/.*"
+    environment:
+      TZ: Europe/Zurich
+      USERMAP_UID: 911
+      USERMAP_GID: 911
+  PAPERLESS_tika:
+    image: ghcr.io/paperless-ngx/tika:latest
+    restart: unless-stopped
+    container_name: PAPERLESS_tika
+    networks:
+      - traefik_default
+    environment:
+      TZ: Europe/Zurich
+      USERMAP_UID: 911
+      USERMAP_GID: 911
+networks:
+  traefik_default:
+    external: true

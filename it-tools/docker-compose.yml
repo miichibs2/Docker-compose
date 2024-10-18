@@ -1,0 +1,32 @@
+version: '3'
+services:
+  it-tools:
+    image: corentinth/it-tools:latest
+    container_name: it-tools
+    networks:
+      - traefik_default
+    volumes:
+      - 'it-tools:/data'
+    environment:
+      - TZ=Europe/Zurich
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${SERVICE_NAME}.entrypoints=web"
+      - "traefik.http.routers.${SERVICE_NAME}.rule=Host(`${SERVICE_NAME}.${DOMAIN}`)"
+      - "traefik.http.middlewares.${SERVICE_NAME}-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.${SERVICE_NAME}.middlewares=${SERVICE_NAME}-https-redirect"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.entrypoints=websecure"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.rule=Host(`${SERVICE_NAME}.${DOMAIN}`)"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.tls=true"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.service=${SERVICE_NAME}"
+      - "traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_PORT}"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.tls.certresolver=production"
+      - "traefik.docker.network=traefik_default"
+  # Middleware
+      - "traefik.http.routers.${SERVICE_NAME}-secure.middlewares=authentik@file"
+volumes:
+  it-tools:
+networks:
+  traefik_default:
+    external: true

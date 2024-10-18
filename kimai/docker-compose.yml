@@ -1,0 +1,67 @@
+
+services:
+  sqldb:
+    image: mysql:8.3
+    container_name: kimai-db
+    networks:
+      traefik_default:
+        ipv4_address: 172.24.255.250
+    volumes:
+      - mysql:/var/lib/mysql
+    environment:
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - TZ=Europe/Zurich
+    command: --default-storage-engine innodb
+    restart: unless-stopped
+    healthcheck:
+      test: mysqladmin -p$$MYSQL_ROOT_PASSWORD ping -h localhost
+      interval: 20s
+      start_period: 10s
+      timeout: 10s
+      retries: 3
+  kimai:
+    image: kimai/kimai2:apache
+    container_name: kimai-server
+    networks:
+      traefik_default:
+        ipv4_address: 172.24.255.249    
+    environment:
+      - ADMINMAIL=${ADMINMAIL}
+      - ADMINPASS=${ADMINPASS}
+      - "DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@sqldb:3306/${MYSQL_DATABASE}?charset=utf8mb4&serverVersion=8.3.0"
+      - TZ=Europe/Zurich
+      - TRUSTED_HOSTS=traefik,localhost,127.0.0.1
+      - PHP_MEMORY_LIMIT=512M
+    volumes:
+      - ${home_dir}/public:/opt/kimai/public
+      - ${home_dir}/data:/opt/kimai/var/data
+      - ${home_dir}/local.yaml:/opt/kimai/config/packages/local.yaml
+    depends_on:
+      - sqldb
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${SERVICE_NAME}.entrypoints=web"
+      - "traefik.http.routers.${SERVICE_NAME}.rule=Host(`${SERVICE_NAME}.${DOMAIN}`)"
+      - "traefik.http.middlewares.${SERVICE_NAME}-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.${SERVICE_NAME}.middlewares=${SERVICE_NAME}-https-redirect"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.entrypoints=websecure"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.rule=Host(`${SERVICE_NAME}.${DOMAIN}`)"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.tls=true"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.service=${SERVICE_NAME}"
+      - "traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_PORT}"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.tls.certresolver=production"
+      - "traefik.docker.network=traefik_default"
+
+volumes:
+    mysql:
+networks:
+  traefik_default:
+    external: true
+    ipam:
+      config:
+        - subnet: 172.24.0.10/16
+          gateway: 172.24.0.1

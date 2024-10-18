@@ -1,0 +1,34 @@
+services:
+  stirling-pdf:
+    image: frooodle/s-pdf:latest
+    restart: always
+    container_name: stirlingpdf
+    networks:
+      - traefik_default
+    volumes:
+      - ${trainingData}/:/usr/share/tessdata
+      - ${Configs}/:/configs
+    environment:
+      TZ: Europe/Zurich
+      DOCKER_ENABLE_SECURITY: true
+      INSTALL_BOOK_AND_ADVANCED_HTML_OPS: true
+      LANGS: de-DE en_GB
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${SERVICE_NAME}.entrypoints=web"
+      - "traefik.http.routers.${SERVICE_NAME}.rule=Host(`${SERVICE_NAME}.${DOMAIN}`)"
+      - "traefik.http.middlewares.${SERVICE_NAME}-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.${SERVICE_NAME}.middlewares=${SERVICE_NAME}-https-redirect"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.entrypoints=websecure"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.rule=Host(`${SERVICE_NAME}.${DOMAIN}`)"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.tls=true"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.service=${SERVICE_NAME}"
+      - "traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_PORT}"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.tls.certresolver=production"
+      - "traefik.docker.network=traefik_default"
+      - "traefik.http.middlewares.${SERVICE_NAME}-rewrite.replacepathregex.regex=^/login$"
+      - "traefik.http.middlewares.${SERVICE_NAME}-rewrite.replacepathregex.replacement=/oauth2/authorization/oidc"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.middlewares=${SERVICE_NAME}-rewrite"
+networks:
+  traefik_default:
+    external: true

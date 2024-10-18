@@ -1,0 +1,18 @@
+version: "3"
+services:
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    command: --cleanup --schedule "0 4 * * *"
+    restart: always
+    environment:
+      - TZ=Europe/Zurich
+    networks:
+      - traefik_default
+
+networks:
+  traefik_default:
+    external: true
